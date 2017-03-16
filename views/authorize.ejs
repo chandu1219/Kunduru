@@ -1,0 +1,89 @@
+<html ng-app="chatbot">
+
+<head>
+    <title>Login</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.5.8/angular.js"></script>
+    <script src="controllers/app.js">
+
+    </script>
+</head>
+
+<body ng-controller="loginController">
+<!--
+    <h1>Login</h1>
+
+    <div>
+        This should be a login page. If the user successfully logs, they should be redirect to this link: <a href="<%= redirectURISuccess %>">Complete Account Link</a>
+    </div>
+
+    <div>
+        Account linking token:
+        <%= accountLinkingToken %>
+    </div>
+
+    <div>
+        Redirect URI:
+        <%= redirectURI %>
+    </div>
+
+    <div>
+        Redirect URI Successful:
+        <%= redirectURISuccess %>
+    </div>
+     -->
+
+    <!-- <div class="row">
+    	<div class="col-sm-4  col-sm-offset-4">
+    		<div uib-alert ng-repeat="alert in alerts" ng-class="'alert-' + (alert.type || 'danger')" close="closeAlert($index)">{{alert.msg}}</div>
+    	</div>
+    </div> -->
+    <div class="row">
+    	<div class="col-sm-4  col-sm-offset-4">
+
+    		<h4 class="page-header">Sign In</h4>
+    		<!-- Tab panes -->
+    		<form name="form.loginForm" role="form" ng-submit="login()" novalidate>
+    			<label class="sr-only" for="signin_email">Email address</label>
+    			<div class="form-group"  ng-class="{'has-error' : form.loginForm.loginText.$touched && form.loginForm.loginText.$error.required}" >
+    				<input type="text" name="loginText" class="form-control" ng-model="loginData.email" id="signin_text" placeholder="Username" required>
+    				<span class="pull-right has-error" ng-show="form.loginForm.loginText.$touched && form.loginForm.loginText.$error.required">Username can't be blank</span>
+    			</div>
+    			<div class="form-group" ng-class="{'has-error' : form.loginForm.userpassword.$touched && form.loginForm.userpassword.$invalid  }">
+    				<label class="sr-only" for="signup_password">Password</label>
+    				<input type="password" name="userpassword" class="form-control" ng-model="loginData.password" id="signin_password" placeholder="Password"
+    					required>
+    					<span class="pull-right has-error" ng-show="form.loginForm.userpassword.$touched && form.loginForm.userpassword.$invalid">Password can't be blank</span>
+    			</div>
+    			<div class="form-group">
+    				<div class="row">
+    					<div class="col-sm-6">
+    						<button type="submit" class="btn btn-primary btn-block">Sign in</button>
+    					</div>
+    					<!--<div class="col-sm-6 text-right"><a ng-click="removeModal()" ui-sref="forgot">Forgot password?</a></div>-->
+    					<!--<br>-->
+    				</div>
+    				<!--<div class="row">
+    					<div class="col-sm-6 "></div>
+    					<div class="col-sm-6 text-right"><a ng-click="removeModal()" ui-sref="resendconfirmation">No account confirmation yet?</a></div>
+    				</div>-->
+    			</div>
+
+    		</form>
+    	</div>
+    </div>
+
+
+</body>
+<script type="text/javascript">
+    angular.module('chatbot').value('redirectionValues',{
+        "accountLinkingToken":"<%= accountLinkingToken %>",
+        "redirectURI":"<%= redirectURI %>",
+        "redirectURISuccess":"<%= redirectURISuccess %>"
+    })
+</script>
+
+
+</html>
