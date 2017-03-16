@@ -11,37 +11,33 @@
 'use strict';
 
 const
+  fs = require('fs'),
   bodyParser = require('body-parser'),
   config = require('config'),
   crypto = require('crypto'),
   express = require('express'),
   https = require('https'),
   request = require('request'),
-  session = require('express-session'),
   apiai = require('apiai'),
   apiaiapp = apiai('27e5e676229643c287b6368bbd66fdd5');
+
+const jsonfile = require('jsonfile'),
+  filepath = './config/session.json';
+
+jsonfile.readFile(filepath, function (err, obj) {
+  //  console.dir(obj)
+})
+var sessionobj;
+sessionobj = require(filepath);
 
 var app = express();
 app.set('port', process.env.PORT || 5000);
 app.set('view engine', 'ejs');
-app.use(bodyParser.json({ verify: verifyRequestSignature }));
+app.use(bodyParser.json({
+  verify: verifyRequestSignature
+}));
 app.use(express.static(__dirname + '/public'));
 
-
-var redis = require("redis"),
-    client = redis.createClient();
-
-// if you'd like to select database 3, instead of 0 (default), call
-// client.select(3, function() { /* ... */ });
-
-client.on("error", function (err) {
-    console.log("Error " + err);
-});
-/*
- * Be sure to setup your config values before running this code. You can
- * set them using environment variables or modifying the config file in /config.
- *
- */
 
 // App Secret can be retrieved from the App Dashboard
 const APP_SECRET = (process.env.MESSENGER_APP_SECRET) ?
@@ -74,10 +70,10 @@ if (!(APP_SECRET && VALIDATION_TOKEN && PAGE_ACCESS_TOKEN && SERVER_URL)) {
  * setup is the same token used here.
  *
  */
-app.get('/webhook', function(req, res) {
+app.get('/webhook', function (req, res) {
   if (req.query['hub.mode'] === 'subscribe' &&
-      req.query['hub.verify_token'] === VALIDATION_TOKEN) {
-    console.log("Validating webhook");
+    req.query['hub.verify_token'] === VALIDATION_TOKEN) {
+    //console.log("Validating webhook");
     res.status(200).send(req.query['hub.challenge']);
   } else {
     console.error("Failed validation. Make sure the validation tokens match.");
@@ -99,12 +95,12 @@ app.post('/webhook', function (req, res) {
   if (data.object == 'page') {
     // Iterate over each entry
     // There may be multiple if batched
-    data.entry.forEach(function(pageEntry) {
+    data.entry.forEach(function (pageEntry) {
       var pageID = pageEntry.id;
       var timeOfEvent = pageEntry.time;
 
       // Iterate over each messaging event
-      pageEntry.messaging.forEach(function(messagingEvent) {
+      pageEntry.messaging.forEach(function (messagingEvent) {
         if (messagingEvent.optin) {
           receivedAuthentication(messagingEvent);
         } else if (messagingEvent.message) {
@@ -118,7 +114,7 @@ app.post('/webhook', function (req, res) {
         } else if (messagingEvent.account_linking) {
           receivedAccountLink(messagingEvent);
         } else {
-          console.log("Webhook received unknown messagingEvent: ", messagingEvent);
+          //console.log("Webhook received unknown messagingEvent: ", messagingEvent);
         }
       });
     });
@@ -132,32 +128,77 @@ app.post('/webhook', function (req, res) {
 });
 
 /*
+set authtoken
+
+*/
+
+function setauthtoken(user, token) {
+
+  sessionobj[user] = token
+  fs.writeFile(filepath, JSON.stringify(sessionobj), function (err, data) {});
+
+  return sessionobj[user]
+}
+
+/*
+set authtoken
+
+*/
+
+function getauthtoken() {
+  sessionobj = require(filepath);
+  return sessionobj[currentuser]
+}
+
+
+/*
  * This path is used for account linking. The account linking call-to-action
  * (sendAccountLinking) is pointed to this URL.
  *
  */
-app.get('/authorize', function(req, res) {
+app.get('/authorize', function (req, res) {
   var accountLinkingToken = req.query.account_linking_token;
   var redirectURI = req.query.redirect_uri;
 
-// console.log("Account Linking token :---------------------------"+accountLinkingToken+"-------------------------------")
-// console.log("Redirect URI ----------------------------------"+redirectURI+"--------------------------");
+  //  //console.log("Account Linking token :---------------------------" + accountLinkingToken + "-------------------------------")
+  //  //console.log("Redirect URI ----------------------------------" + redirectURI + "--------------------------");
 
-  // Authorization Code should be generated per user by the developer. This will
-  // be passed to the Account Linking callback.
-  // var authCode = "1234567890";
+  //   Authorization Code should be generated per user by the developer. This will
+  //   be passed to the Account Linking callback.
+  var authCode = "1234567890";
 
-  // Redirect users to this URI on successful login
+  //   Redirect users to this URI on successful login
   var redirectURISuccess = redirectURI;
 
-  console.log(redirectURISuccess);
+  //  //console.log(redirectURISuccess);
 
   res.render('authorize', {
     accountLinkingToken: accountLinkingToken,
     redirectURI: redirectURI,
     redirectURISuccess: redirectURISuccess
   });
+
+
+
 });
+
+app.post('/savetoken', function (req, res) {
+  currentuser = req.body.user.email
+  if (setauthtoken(req.body.user.email, req.body.authentication_token)) {
+    res.send(true)
+  } else {
+    res.send(false)
+  }
+
+})
+
+
+
+
+//setauthtoken('phani', "changed")
+//getauthtoken('phani')
+
+
 
 /*
  * Verify that the callback came from Facebook. Using the App Secret from
@@ -180,8 +221,8 @@ function verifyRequestSignature(req, res, buf) {
     var signatureHash = elements[1];
 
     var expectedHash = crypto.createHmac('sha1', APP_SECRET)
-                        .update(buf)
-                        .digest('hex');
+      .update(buf)
+      .digest('hex');
 
     if (signatureHash != expectedHash) {
       throw new Error("Couldn't validate the request signature.");
@@ -240,7 +281,7 @@ function receivedMessage(event) {
 
   console.log("Received message for user %d and page %d at %d with message:",
     senderID, recipientID, timeOfMessage);
-  console.log(JSON.stringify(message));
+  ////console.log(JSON.stringify(message));
 
   var isEcho = message.is_echo;
   var messageId = message.mid;
@@ -255,7 +296,9 @@ function receivedMessage(event) {
   if (isEcho) {
     // Just logging message echoes to console
     console.log("Received echo for message %s and app %d with metadata %s",
-      messageId, appId, metadata);
+      messageId,
+      appId,
+      metadata);
     return;
   } else if (quickReply) {
     var quickReplyPayload = quickReply.payload;
@@ -349,13 +392,13 @@ function receivedDeliveryConfirmation(event) {
   var sequenceNumber = delivery.seq;
 
   if (messageIDs) {
-    messageIDs.forEach(function(messageID) {
+    messageIDs.forEach(function (messageID) {
       console.log("Received delivery confirmation for message ID: %s",
         messageID);
     });
   }
 
-  console.log("All message before %d were delivered.", watermark);
+  ////console.log("All message before %d were delivered.", watermark);
 }
 
 
@@ -550,85 +593,85 @@ function sendTextMessage(recipientId, messageText) {
 
   // callSendAPI(messageData);
 
-    let sender = recipientId;
-    let text = messageText;
+  let sender = recipientId;
+  let text = messageText;
 
-    let apiai = apiaiapp.textRequest(text, {
-      sessionId: 'tabby_cat' // use any arbitrary id
-    });
+  let apiai = apiaiapp.textRequest(text, {
+    sessionId: 'tabby_cat' // use any arbitrary id
+  });
 
-    apiai.on('response', (response) => {
-      // Got a response from api.ai. Let's POST to Facebook Messenger
+  apiai.on('response', (response) => {
+    // Got a response from api.ai. Let's POST to Facebook Messenger
 
-        let aiText = {text: response.result.fulfillment.speech};
-        // console.log(response);
+    let aiText = {
+      text: response.result.fulfillment.speech
+    };
+    // ////console.log(response);
 
-        if (response.result.action === 'input.welcome') {
+    if (response.result.action === 'input.welcome') {
 
-              aiText = {
-                  attachment: {
-                    type: "template",
-                    payload: {
-                      template_type: "button",
-                      text: "Welcome to eTeki",
-                      buttons:[{
-                        type: "account_link",
-                        url: SERVER_URL + "/authorize"
+      aiText = {
+        attachment: {
+          type: "template",
+          payload: {
+            template_type: "button",
+            text: "Welcome to eTeki",
+            buttons: [{
+              type: "account_link",
+              url: SERVER_URL + "/authorize"
                       }]
-                    }
-                  }
-                }
-        }else if(response.result.action === 'interviews')
-        {
-          console.log('Entered into Loop =------------',response);
-
-            client.get("auth_token", function(err, data) {
-                  // reply is null when the key is missing
-                  console.log(data);
-
-
-            request({
-                url: 'https://qa-api.eteki.com/interviewers/my_interviews',
-                method: 'GET',
-                headers: {"authentication-token": data},
-                json: {
-                  status : response.result.parameters.interview_status
-                }
-              }, (error, response) => {
-                if (error) {
-                    console.log('Error sending message: ', error);
-                } else if (response.body.error) {
-                    console.log('response',response.body);
-                    console.log('Error: ', response.body.error);
-                }
-              });
-
-            });
+          }
         }
+      }
+    } else if (response.result.action === 'interviews') {
+      ////console.log('Entered into Loop =------------', response);
 
-        request({
-          url: 'https://graph.facebook.com/v2.6/me/messages',
-          qs: {access_token: PAGE_ACCESS_TOKEN},
-          method: 'POST',
-          json: {
-            recipient: {id: sender},
-            message: aiText
-          }
-        }, (error, response) => {
-          if (error) {
-              console.log('Error sending message: ', error);
-          } else if (response.body.error) {
-              console.log('response',response.body);
-              console.log('Error: ', response.body.error);
-          }
-        });
+      request({
+        url: 'https://qa-api.eteki.com/interviewers/my_interviews',
+        method: 'GET',
+        headers: {
+          "authentication-token": data
+        },
+        json: {
+          status: response.result.parameters.interview_status
+        }
+      }, (error, response) => {
+        if (error) {
+          //console.log('Error sending message: ', error);
+        } else if (response.body.error) {
+          //console.log('response', response.body);
+          //console.log('Error: ', response.body.error);
+        }
+      });
+    }
+
+    request({
+      url: 'https://graph.facebook.com/v2.6/me/messages',
+      qs: {
+        access_token: PAGE_ACCESS_TOKEN
+      },
+      method: 'POST',
+      json: {
+        recipient: {
+          id: sender
+        },
+        message: aiText
+      }
+    }, (error, response) => {
+      if (error) {
+        //console.log('Error sending message: ', error);
+      } else if (response.body.error) {
+        //console.log('response', response.body);
+        //console.log('Error: ', response.body.error);
+      }
     });
+  });
 
-    apiai.on('error', (error) => {
-      console.log(error);
-    });
+  apiai.on('error', (error) => {
+    //console.log(error);
+  });
 
-    apiai.end();
+  apiai.end();
 
 }
 
@@ -647,7 +690,7 @@ function sendButtonMessage(recipientId) {
         payload: {
           template_type: "button",
           text: "This is test text",
-          buttons:[{
+          buttons: [{
             type: "web_url",
             url: "https://www.oculus.com/en-us/rift/",
             title: "Open Web URL"
@@ -725,13 +768,13 @@ function sendGenericMessage(recipientId) {
  */
 function sendReceiptMessage(recipientId) {
   // Generate a random receipt ID as the API requires a unique ID
-  var receiptId = "order" + Math.floor(Math.random()*1000);
+  var receiptId = "order" + Math.floor(Math.random() * 1000);
 
   var messageData = {
     recipient: {
       id: recipientId
     },
-    message:{
+    message: {
       attachment: {
         type: "template",
         payload: {
@@ -798,19 +841,19 @@ function sendQuickReply(recipientId) {
       text: "What's your favorite movie genre?",
       quick_replies: [
         {
-          "content_type":"text",
-          "title":"Action",
-          "payload":"DEVELOPER_DEFINED_PAYLOAD_FOR_PICKING_ACTION"
+          "content_type": "text",
+          "title": "Action",
+          "payload": "DEVELOPER_DEFINED_PAYLOAD_FOR_PICKING_ACTION"
         },
         {
-          "content_type":"text",
-          "title":"Comedy",
-          "payload":"DEVELOPER_DEFINED_PAYLOAD_FOR_PICKING_COMEDY"
+          "content_type": "text",
+          "title": "Comedy",
+          "payload": "DEVELOPER_DEFINED_PAYLOAD_FOR_PICKING_COMEDY"
         },
         {
-          "content_type":"text",
-          "title":"Drama",
-          "payload":"DEVELOPER_DEFINED_PAYLOAD_FOR_PICKING_DRAMA"
+          "content_type": "text",
+          "title": "Drama",
+          "payload": "DEVELOPER_DEFINED_PAYLOAD_FOR_PICKING_DRAMA"
         }
       ]
     }
@@ -824,7 +867,7 @@ function sendQuickReply(recipientId) {
  *
  */
 function sendReadReceipt(recipientId) {
-  console.log("Sending a read receipt to mark message as seen");
+  //console.log("Sending a read receipt to mark message as seen");
 
   var messageData = {
     recipient: {
@@ -841,7 +884,7 @@ function sendReadReceipt(recipientId) {
  *
  */
 function sendTypingOn(recipientId) {
-  console.log("Turning typing indicator on");
+  //console.log("Turning typing indicator on");
 
   var messageData = {
     recipient: {
@@ -858,7 +901,7 @@ function sendTypingOn(recipientId) {
  *
  */
 function sendTypingOff(recipientId) {
-  console.log("Turning typing indicator off");
+  //console.log("Turning typing indicator off");
 
   var messageData = {
     recipient: {
@@ -885,7 +928,7 @@ function sendAccountLinking(recipientId) {
         payload: {
           template_type: "button",
           text: "Welcome. Link your account.",
-          buttons:[{
+          buttons: [{
             type: "account_link",
             url: SERVER_URL + "/authorize"
           }]
@@ -905,7 +948,9 @@ function sendAccountLinking(recipientId) {
 function callSendAPI(messageData) {
   request({
     uri: 'https://graph.facebook.com/v2.6/me/messages',
-    qs: { access_token: PAGE_ACCESS_TOKEN },
+    qs: {
+      access_token: PAGE_ACCESS_TOKEN
+    },
     method: 'POST',
     json: messageData
 
@@ -918,8 +963,8 @@ function callSendAPI(messageData) {
         console.log("Successfully sent message with id %s to recipient %s",
           messageId, recipientId);
       } else {
-      console.log("Successfully called Send API for recipient %s",
-        recipientId);
+        console.log("Successfully called Send API for recipient %s",
+          recipientId);
       }
     } else {
       console.error("Failed calling Send API", response.statusCode, response.statusMessage, body.error);
@@ -930,8 +975,8 @@ function callSendAPI(messageData) {
 // Start server
 // Webhooks must be available via SSL with a certificate signed by a valid
 // certificate authority.
-app.listen(app.get('port'), function() {
-  console.log('Node app is running on port', app.get('port'));
+app.listen(app.get('port'), function () {
+  //console.log('Node app is running on port', app.get('port'));
 });
 
 module.exports = app;
